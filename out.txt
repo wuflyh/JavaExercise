@@ -1,0 +1,84 @@
+START OF POLICY ENFORCED ARRANGEMENTS
+
+ORIGINAL LEFT
+1. Name: Alice, Group: 3, Rank: 23
+2. Name: Beth, Group: 3, Rank: 34
+3. Name: Donna, Group: 2, Rank: 11
+4. Name: Gemma, Group: 3, Rank: 45
+ORIGINAL RIGHT
+1. Name: Able, Group: 3, Rank: 56
+2. Name: Baker, Group: 3, Rank: 67
+3. Name: Charlie, Group: 1, Rank: 100
+4. Name: Del, Group: 1, Rank: 100
+5. Name: Edward, Group: 3, Rank: 78
+6. Name: Frank, Group: 2, Rank: 42
+7. Name: Gary, Group: 2, Rank: 53
+8. Name: Harry, Group: 2, Rank: 89
+9. Name: Ian, Group: 2, Rank: 2
+10. Name: John, Group: 2, Rank: 31
+RULES
+Maximum group size: 5
+Excluded: Charlie, Del, Donna
+-----
+
+BY_NUMBER
+Status: SUCCESS
+-----
+LEFT
+1. Name: Able, Group: 3, Rank: 56
+2. Name: Alice, Group: 3, Rank: 23
+3. Name: Baker, Group: 3, Rank: 67
+4. Name: Beth, Group: 3, Rank: 34
+5. Name: Donna, Group: 2, Rank: 11
+6. Name: Edward, Group: 4, Rank: 78
+7. Name: Gemma, Group: 3, Rank: 45
+RIGHT
+1. Name: Charlie, Group: 1, Rank: 100
+2. Name: Del, Group: 1, Rank: 100
+3. Name: Frank, Group: 2, Rank: 42
+4. Name: Gary, Group: 2, Rank: 53
+5. Name: Harry, Group: 2, Rank: 89
+6. Name: Ian, Group: 2, Rank: 2
+7. Name: John, Group: 2, Rank: 31
+
+BY_RANK
+Status: SUCCESS
+-----
+LEFT
+1. Name: Alice, Group: 3, Rank: 23
+2. Name: Baker, Group: 3, Rank: 67
+3. Name: Donna, Group: 2, Rank: 11
+4. Name: Edward, Group: 4, Rank: 78
+5. Name: Frank, Group: 2, Rank: 42
+6. Name: Gary, Group: 2, Rank: 53
+7. Name: Harry, Group: 2, Rank: 89
+8. Name: Ian, Group: 2, Rank: 2
+RIGHT
+1. Name: Able, Group: 3, Rank: 56
+2. Name: Beth, Group: 3, Rank: 34
+3. Name: Charlie, Group: 1, Rank: 100
+4. Name: Del, Group: 1, Rank: 100
+5. Name: Gemma, Group: 3, Rank: 45
+6. Name: John, Group: 2, Rank: 31
+Rank sum totals: [365/366]
+
+BY_GROUP
+Status: SUCCESS
+-----
+LEFT
+1. Name: Donna, Group: 2, Rank: 11
+2. Name: Edward, Group: 4, Rank: 78
+3. Name: Frank, Group: 2, Rank: 42
+4. Name: Gary, Group: 2, Rank: 53
+5. Name: Harry, Group: 2, Rank: 89
+6. Name: Ian, Group: 2, Rank: 2
+7. Name: John, Group: 4, Rank: 31
+RIGHT
+1. Name: Able, Group: 3, Rank: 56
+2. Name: Alice, Group: 3, Rank: 23
+3. Name: Baker, Group: 3, Rank: 67
+4. Name: Beth, Group: 3, Rank: 34
+5. Name: Charlie, Group: 1, Rank: 100
+6. Name: Del, Group: 1, Rank: 100
+7. Name: Gemma, Group: 3, Rank: 45
+
