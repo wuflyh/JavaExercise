@@ -1,5 +1,6 @@
 package tbd.example;
 
+import java.util.*;
 
 /**
  * Arrange rosters according to a specified policy.
@@ -146,22 +147,209 @@ public class PolicyEnforcer {
             return Status.ALREADY_ARRANGED;
         }
 
-        // TODO
+        // k - the number of players in bigger Roster
+        // ind - the index to iterate throught the players in the bigger Roster which changes meanwhile
+        int k = bigger.size();
+        int ind = 0;
+        while ((k > 0) && (bigger.size() -1 > smaller.size())) {
+            String candidate = bigger.get(ind);
+            if (bigger.remove(candidate, rules)) {
+                // move one player from the bigger to the smaller Roster
+                // afterwards the index will point to the next candidate
+                smaller.add(candidate, rules);
+            } else {
+                // if this player does not qualify, inc the index
+                ind += 1;
+            }
+            k -= 1;
+        }
 
-        return Status.SUCCESS;
+        if ((bigger.size() - 1) <= smaller.size()) {
+            return Status.SUCCESS;
+        } else {
+            return Status.TOO_MANY_EXCLUSIONS;
+        }
     }
 
     /* See Policy declaration comment for BY_RANK implementation requirements */
     private Status arrangeByRank() {
-        // TODO
+        leftRosterFinal = new Roster();
+        rightRosterFinal = new Roster();
 
+        // freeList are the free players that can be allot to either of the two Rosters
+        ArrayList<String> freeList = new ArrayList<String>();
+        // rankList are the free players' ranks
+        ArrayList<Integer> rankList = new ArrayList<Integer>();
+
+        // reservedLeft are those players that stick to left Roster
+        ArrayList<String> reservedLeft = new ArrayList<String>();
+
+        // reservedRight are those players that stick to right Roster
+        ArrayList<String> reservedRight = new ArrayList<String>();
+
+        //sum - sum of all player ranks
+        //fsum - the sum of free player ranks
+        //rsum - the sum of player in reservedLeft ranks
+        int sum = 0, fsum = 0, rsum = 0;
+
+        // calculate the metrics - sum, fsum and rsum
+        for (int i = 0; i < leftRosterOriginal.size(); i++) {
+            String cur = leftRosterOriginal.get(i);
+            Player p = Player.LookupByName(cur);
+            if (rules.isNameExcluded(cur)) {
+                reservedLeft.add(cur);
+                rsum += p.rank;
+            } else {
+                freeList.add(cur);
+                rankList.add(p.rank);
+                fsum += p.rank;
+            }
+            sum += p.rank;
+        }
+
+
+        for (int i = 0; i < rightRosterOriginal.size(); i++) {
+            String cur = rightRosterOriginal.get(i);
+            Player p = Player.LookupByName(cur);
+            if (!rules.isNameExcluded(cur)) {
+                freeList.add(cur);
+                rankList.add(p.rank);
+                fsum += p.rank;
+            } else {
+                reservedRight.add(cur);
+            }
+            sum += p.rank;
+        }
+
+        // minVal - the minimum total rank either Roster should have
+        // minCnt - the minimum number of players either Roster should have
+        int minVal = (sum-90+1)/2;
+        int minCnt = (leftRosterOriginal.size() + rightRosterOriginal.size() - 2 + 1)/2;
+
+        // adjusted minVal and minCnt for the left Roster
+        minVal -= rsum;
+        minCnt -= reservedLeft.size();
+
+
+        // we split the players into two Rosters
+        // temporarily into reservedLeft and reservedRight list
+        // by adding players from freelist to left Roster such that
+        // the rank sum of the added players in range [minVal, minVal + 90]
+        // the count of the added players in range [minCnt, minCnt + 2]
+
+        if (minVal+90 < 0 || minVal > fsum || minCnt+2 < 0 || minCnt > freeList.size()) {
+            // no solution
+            return Status.TOO_MANY_EXCLUSIONS;
+        }
+
+        // allot the players from the list of free players to the left Roster
+        // with the rank and count requirements
+        ArrayList<String> addonList = allot(freeList, rankList, minVal, minCnt);
+        if (addonList == null) {
+            // allot failed
+            return Status.TOO_MANY_EXCLUSIONS;
+        }
+
+        // now reservedLeft and reservedRight contains the players for the two Rosters
+        for (String s: freeList) {
+            if (addonList.contains(s)) {
+                reservedLeft.add(s);
+            } else {
+                reservedRight.add(s);
+            }
+        }
+
+        // fill up the left and right final Rosters and return
+        for (String s: reservedLeft) {
+            leftRosterFinal.add(s, Rules.NoRules);
+        }
+        for (String s: reservedRight) {
+            rightRosterFinal.add(s, Rules.NoRules);
+        }
         return Status.SUCCESS;
     }
 
+    /**
+     * Allot the players from the free player list to the left Roster
+     * @param  freeList - the list of players to be alloted
+     * @param  rankList - the ranks for the free players
+     * @param minVal - the minimum value of rank the alloted players should sum up to.
+     * @param minCnt - the minimum number of players that should be alloted.
+     * @return list of players for the left Roster.
+     */
+    private ArrayList<String> allot(ArrayList<String> freeList, ArrayList<Integer> rankList, int minVal, int minCnt) {
+        ArrayList<String> res = new ArrayList<String>();
+        HashMap<Integer, ArrayList<ArrayList<String>>> hm = new HashMap<Integer, ArrayList<ArrayList<String>>>();
+        // initialize
+        ArrayList<String> empty = new ArrayList<String>();
+        ArrayList<ArrayList<String>> emptyList = new ArrayList<ArrayList<String>>();
+        emptyList.add(empty);
+        // set emptyList only for sum 0
+        hm.put(0, emptyList);
+
+        // dynamic programming
+
+        for (int i = 0; i < freeList.size(); i++) {
+            int curRank = rankList.get(i);
+            for (int k=minVal+90; k>0; k--) {
+                ArrayList<ArrayList<String>> newVal = new ArrayList<ArrayList<String>>();
+                if (hm.containsKey(k)) {
+                    newVal.addAll(hm.get(k));
+                }
+                int prev = k - curRank;
+                if (hm.containsKey(prev)) {
+                    ArrayList<ArrayList<String>> prevList = hm.get(prev);
+                    for (ArrayList<String> x:prevList) {
+                        ArrayList<String> newItem = new ArrayList<String>();
+                        newItem.addAll(x);
+                        newItem.add(freeList.get(i));
+                        newVal.add(newItem);
+                    }
+                }
+
+                if (newVal.size() > 0) {
+                    hm.put(k, newVal);
+                }
+            }
+        }
+
+        // we select a qualified list to return
+        for (int k = minVal; k<=minVal+90; k++) {
+            if (hm.containsKey(k)) {
+                ArrayList<ArrayList<String>> ans = hm.get(k);
+                for (ArrayList<String> x: ans) {
+                    if (x.size() >= minCnt && x.size() <= minCnt+2) {
+                        // x could be empty at extream case
+                        return x;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private void processOriginalRoster(Roster r) {
+        Roster home;
+        for (int i = 0; i < r.size(); i++) {
+            String cur = r.get(i);
+            Player p = Player.LookupByName(cur);
+            Roster.GroupParity par = Roster.CheckParity(p.group);
+            if (par == Roster.GroupParity.EVEN) {
+                home = leftRosterFinal;
+            } else {
+                home = rightRosterFinal;
+            }
+            home.addWithParity(cur, rules, par);
+        }
+    }
     /* See Policy declaration comment for BY_GROUP implementation requirements */
     private Status arrangeByGroup() {
-        // TODO
 
+        leftRosterFinal = new Roster();
+        rightRosterFinal = new Roster();
+        processOriginalRoster(leftRosterOriginal);
+        processOriginalRoster(rightRosterOriginal);
         return Status.SUCCESS;
     }
 }

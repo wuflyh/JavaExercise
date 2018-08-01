@@ -1,9 +1,7 @@
 package tbd.example;
 
-import java.util.ArrayList;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.stream.Stream;
-
 
 /**
  * A list of player names. Player objects are looked up by name using functions in the Player class.
@@ -37,8 +35,8 @@ public class Roster {
 
     // Fields
     private ArrayList<String> players;
-    // TODO - add any additional fields you need here
-
+    private TreeMap<Integer, Integer> groupCounts;
+    private HashSet<String> names;
 
     /**
      * A convenience variable to make it easier to count stuff in a Roster stream operation
@@ -53,21 +51,38 @@ public class Roster {
     public Roster() {
         players = new ArrayList<String>(12);
         counter = 0;
-        // TODO
+        groupCounts = new TreeMap<Integer, Integer>();
+        names = new HashSet<String>();
     }
 
     /**
      * Sort the roster ascending (A to Z) by name, using the natural lexicographic order.
      */
     public void sortByName() {
-        // TODO
+        class ByNameComp implements Comparator<String>{
+            public int compare(String e1, String e2) {
+                Player p1 = Player.LookupByName(e1);
+                Player p2 = Player.LookupByName(e2);
+                return p1.name.compareTo(p2.name);
+            }
+        }
+
+        Collections.sort(players, new ByNameComp());
     }
 
     /**
      * Sort the roster descending (100 to 1) by rank
      */
     public void sortByRank() {
-        // TODO
+        class ByRankComp implements Comparator<String>{
+            public int compare(String e1, String e2) {
+                Player p1 = Player.LookupByName(e1);
+                Player p2 = Player.LookupByName(e2);
+                return p1.rank - p2.rank;
+            }
+        }
+
+        Collections.sort(players, new ByRankComp());
     }
 
     /**
@@ -84,7 +99,7 @@ public class Roster {
      * @throws IllegalArgumentException If name is already in the 'to' roster.
      */
     public void moveTo(String name, Roster to, Rules rules) throws NoSuchElementException, IllegalArgumentException  {
-        // TODO
+        to.add(name, rules);
     }
 
     /**
@@ -100,9 +115,30 @@ public class Roster {
      * @throws IllegalArgumentException If name is already in this roster.
      */
     public boolean add(String name, Rules rules) throws NoSuchElementException, IllegalArgumentException {
-        // TODO
-        return false; // Correct this line of code and remove this comment
+
+        // sanity checks
+        if (rules.isNameExcluded(name)) {
+            return false;
+        }
+        if (names.contains(name)) {
+            throw new IllegalArgumentException("Name already exists in the Roster");
+        }
+
+        Player p = Player.LookupByName(name);
+        if (p == null) {
+            throw new NoSuchElementException("Player does not exist in the factory");
+        }
+        int g = updateGroup(name, rules);
+        if (g != p.group) {
+            Player.Replace(name, p.rank, g);
+        }
+
+        players.add(name);
+        names.add(name);
+        groupCounts.put(g, groupCounts.getOrDefault(g, 0)+1);
+        return true;
     }
+
 
     /**
      * Add a Roster to this Roster. If the rules exclude a player from being moved, the player is not
@@ -115,8 +151,13 @@ public class Roster {
      * @return True if this roster was changed, false otherwise.
      */
     public boolean addAll(Roster from, Rules rules) {
-        // TODO
-        return false; // Correct this line of code and remove this comment
+        boolean changed = false;
+        for (String player :from.players) {
+            if (add(player, rules)) {
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     /**
@@ -131,8 +172,23 @@ public class Roster {
      * @throws NoSuchElementException If no Player object can be found for a name, or no such name in the roster
      */
     public boolean remove(String name, Rules rules) throws NoSuchElementException {
-        // TODO
-        return false; // Correct this line of code and remove this comment
+        if (!names.contains(name)) {
+            throw new NoSuchElementException("Name does not exist in Roster");
+        }
+        Player p = Player.LookupByName(name);
+        if (p == null) {
+            throw new NoSuchElementException("Player does not exist in the factory");
+        }
+        if (rules.isNameExcluded(name)) {
+            return false;
+        }
+        players.remove(name);
+        names.remove(name);
+        int cnt = groupCounts.remove(p.group);
+        if (cnt-1 > 0){
+            groupCounts.put(p.group, cnt-1);
+        }
+        return true;
     }
 
     /**
@@ -144,7 +200,12 @@ public class Roster {
      * @throws IllegalArgumentException If group is less than 0.
      */
     public int groupSize(int group) throws IllegalArgumentException {
-        // TODO
+        if (group < 0) {
+            throw new IllegalArgumentException("group is less than 0");
+        }
+        if (groupCounts.containsKey(group)) {
+            return groupCounts.get(group);
+        }
         return 0; // Correct this line of code and remove this comment
     }
 
@@ -165,8 +226,56 @@ public class Roster {
      * @throws NoSuchElementException If no Player object can be found for a name.
      */
     public int updateGroup(String name, Rules rules) {
-        // TODO
-        return 0; // Correct this line of code and remove this comment
+        Player p = Player.LookupByName(name);
+        if (p == null) {
+            throw new NoSuchElementException("Player does not exist in the factory");
+        }
+        Integer k = p.group;
+        Integer cnt = groupCounts.get(k);
+
+        for (;(cnt != null)&&(cnt >= rules.getMaximumGroup());) {
+            Integer nextk = groupCounts.higherKey(k);
+            if (nextk == null) {
+                return k+1;
+            }
+            k = nextk;
+            cnt = groupCounts.get(nextk);
+        }
+
+        return k;
+    }
+
+    public void addWithParity(String name, Rules rules, GroupParity par) {
+        Player p = Player.LookupByName(name);
+        if (p == null) {
+            throw new NoSuchElementException("Player does not exist in the factory");
+        }
+        Integer k = p.group;
+        GroupParity kpar = CheckParity(k);
+        Integer cnt = groupCounts.get(k);
+
+        while ((kpar != par) || ((cnt!=null) && (cnt >=rules.getMaximumGroup()))) {
+            Integer nextk = groupCounts.higherKey(k);
+            if (nextk == null) {
+                if (kpar == par) {
+                    k =  k+2;
+                } else {
+                    k =  k+1;
+                }
+                break;
+            }
+            cnt = groupCounts.get(nextk);
+            kpar = CheckParity(nextk);
+            k = nextk;
+        }
+
+        if (k != p.group) {
+            Player.Replace(name, p.rank, k);
+        }
+
+        players.add(name);
+        names.add(name);
+        groupCounts.put(k, groupCounts.getOrDefault(k, 0)+1);
     }
 
     // TODO - add any additional methods you may need here
